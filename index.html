@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeMarket — Берекет Гранд</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- Зеленое всплывающее плавающее уведомление -->
+  <div id="notification" class="notification hidden">✅ Товар успешно выставлен!</div>
+
+  <header class="navbar">
+    <div class="logo">BeMarket <span>Берекет Гранд</span></div>
+    <div class="controls">
+      <button id="openModalBtn" class="btn btn-primary">+ Выставить товар</button>
+      <button id="themeToggleBtn" class="btn btn-secondary">🌙 Тёмная тема</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="search-and-filter">
+      <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или бутику...">
+      <select id="categoryFilter">
+        <option value="all">Все категории</option>
+        <option value="Одежда и обувь">Одежда и обувь</option>
+        <option value="Электроника">Электроника</option>
+        <option value="Аксессуары">Аксессуары</option>
+        <option value="Косметика">Косметика</option>
+        <option value="Товары для дома">Товары для дома</option>
+        <option value="Другое">Другое</option>
+      </select>
+    </div>
+
+    <h2>Актуальные объявления</h2>
+    <div id="productsGrid" class="products-grid"></div>
+  </main>
+
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Новое объявление</h3>
+        <button id="closeModalCross" class="close-btn">&times;</button>
+      </div>
+      
+      <form id="productForm">
+        <div class="form-group">
+          <label for="titleInput">Название товара</label>
+          <input type="text" id="titleInput" required placeholder="Например: Куртка зимняя">
+        </div>
+
+        <div class="form-group">
+          <label for="categorySelect">Категория</label>
+          <select id="categorySelect" required>
+            <option value="Одежда и обувь">Одежда и обувь</option>
+            <option value="Электроника">Электроника</option>
+            <option value="Аксессуары">Аксессуары</option>
+            <option value="Косметика">Косметика</option>
+            <option value="Товары для дома">Товары для дома</option>
+            <option value="Другое">Другое</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="floorSelect">Этаж</label>
+            <select id="floorSelect" required>
+              <option value="0">0 этаж</option>
+              <option value="1">1 этаж</option>
+              <option value="2">2 этаж</option>
+              <option value="3">3 этаж</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="placeInput">№ места / Бутик</label>
+            <input type="text" id="placeInput" required placeholder="A-12">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="conditionSelect">Состояние</label>
+          <select id="conditionSelect" required>
+            <option value="Новое (в упаковке)">Новое (в упаковке)</option>
+            <option value="Б/У (хорошое)">Б/У (хорошое)</option>
+            <option value="Б/У (плохое)">Б/У (плохое)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="phoneInput">Номер телефона (WhatsApp)</label>
+          <input type="tel" id="phoneInput" required placeholder="0555123456">
+        </div>
+
+        <div class="form-group">
+          <label for="imageInput">Фотография товара</label>
+          <input type="file" id="imageInput" accept="image/*" required>
+        </div>
+
+        <div id="cooldownTimer" class="cooldown-msg hidden"></div>
+
+        <div class="modal-actions">
+          <button type="button" id="closeModalBtn" class="btn btn-cancel">Отмена</button>
+          <button type="submit" id="submitBtn" class="btn btn-primary">Опубликовать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
