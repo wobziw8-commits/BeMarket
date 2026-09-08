@@ -11,7 +11,7 @@
 </head>
 <body>
 
-  <!-- Зеленое всплывающее плавающее уведомление -->
+  <!-- Всплывающее уведомление -->
   <div id="notification" class="notification hidden">✅ Товар успешно выставлен!</div>
 
   <header class="navbar">
@@ -24,9 +24,10 @@
 
   <main class="container">
     <div class="search-and-filter">
-      <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или бутику...">
+      <input type="text" id="searchInput" placeholder="🔍 Поиск по названию, бутику или цене...">
       <select id="categoryFilter">
         <option value="all">Все категории</option>
+        <option value="my">👤 Только мои товары</option>
         <option value="Одежда и обувь">Одежда и обувь</option>
         <option value="Электроника">Электроника</option>
         <option value="Аксессуары">Аксессуары</option>
@@ -63,6 +64,15 @@
             <option value="Товары для дома">Товары для дома</option>
             <option value="Другое">Другое</option>
           </select>
+        </div>
+
+        <!-- Поле цены -->
+        <div class="form-group">
+          <label for="priceInput">Цена (в сомах)</label>
+          <input type="number" id="priceInput" placeholder="Например: 1500" min="0">
+          <label class="checkbox-label">
+            <input type="checkbox" id="negotiableCheckbox"> Договорная / Обмен
+          </label>
         </div>
 
         <div class="form-row">

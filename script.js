@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error("Ошибка Firebase:", err);
   }
 
+  // Создание уникального идентификатора владельца устройств
+  let userToken = localStorage.getItem('bemarket_user_token');
+  if (!userToken) {
+    userToken = 'user_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('bemarket_user_token', userToken);
+  }
+
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const closeModalCross = document.getElementById('closeModalCross');
@@ -31,9 +38,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const categoryFilter = document.getElementById('categoryFilter');
   const notification = document.getElementById('notification');
 
+  const priceInput = document.getElementById('priceInput');
+  const negotiableCheckbox = document.getElementById('negotiableCheckbox');
+
   let allProducts = [];
   let lastPostTime = 0;
   const COOLDOWN_DURATION = 3 * 60 * 1000;
+
+  if (negotiableCheckbox && priceInput) {
+    negotiableCheckbox.addEventListener('change', () => {
+      if (negotiableCheckbox.checked) {
+        priceInput.value = '';
+        priceInput.disabled = true;
+      } else {
+        priceInput.disabled = false;
+      }
+    });
+  }
 
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
@@ -83,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setInterval(checkCooldown, 1000);
 
-  // Сжатие картинки перед сохранением, чтобы не переполнять Firebase
   function processAndCompressImage(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -125,6 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      const isNegotiable = negotiableCheckbox ? negotiableCheckbox.checked : false;
+      const priceVal = priceInput ? priceInput.value.trim() : '';
+
+      if (!isNegotiable && !priceVal) {
+        alert("Укажите цену товара или отметьте 'Договорная / Обмен'");
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = 'Публикация...';
 
@@ -136,6 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const phone = document.getElementById('phoneInput').value.trim();
       const imageFile = document.getElementById('imageInput').files[0];
 
+      let displayPrice = isNegotiable ? 'Договорная / Обмен' : `${priceVal} сом`;
+
       try {
         let imageUrl = '';
         if (imageFile) {
@@ -145,21 +175,24 @@ document.addEventListener('DOMContentLoaded', () => {
         await db.collection('products').add({
           title,
           category,
+          price: displayPrice,
           floor,
           place,
           condition,
           phone,
           imageUrl,
+          ownerToken: userToken,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
         lastPostTime = Date.now();
         productForm.reset();
+        if (priceInput) priceInput.disabled = false;
         closeModal();
         showNotification('✅ Товар успешно выставлен!');
       } catch (error) {
         console.error("Ошибка сохранения:", error);
-        alert("Ошибка при выкладывании товара. Проверьте подключение.");
+        alert("Ошибка при выкладывании товара.");
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Опубликовать';
@@ -167,14 +200,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Функция для удаления товара
+  window.deleteProduct = async (docId) => {
+    if (confirm("Вы уверены, что хотите снять этот товар с продажи?")) {
+      try {
+        await db.collection('products').doc(docId).delete();
+        showNotification('🗑 Товар снят с продажи!');
+      } catch (err) {
+        console.error("Ошибка при удалении:", err);
+        alert("Не удалось удалить товар.");
+      }
+    }
+  };
+
   function filterAndRender() {
     const query = searchInput ? searchInput.value.toLowerCase() : '';
     const selectedCat = categoryFilter ? categoryFilter.value : 'all';
 
     const filtered = allProducts.filter(item => {
       const matchesSearch = (item.title && item.title.toLowerCase().includes(query)) ||
-                            (item.place && item.place.toLowerCase().includes(query));
-      const matchesCat = selectedCat === 'all' || item.category === selectedCat;
+                            (item.place && item.place.toLowerCase().includes(query)) ||
+                            (item.price && item.price.toLowerCase().includes(query));
+      
+      let matchesCat = false;
+      if (selectedCat === 'all') {
+        matchesCat = true;
+      } else if (selectedCat === 'my') {
+        matchesCat = item.ownerToken === userToken;
+      } else {
+        matchesCat = item.category === selectedCat;
+      }
+
       return matchesSearch && matchesCat;
     });
 
@@ -197,10 +253,16 @@ document.addEventListener('DOMContentLoaded', () => {
         : `<div class="card-img" style="display:flex;align-items:center;justify-content:center;opacity:0.5;">Без фото</div>`;
 
       const waPhone = formatPhoneForWa(item.phone);
-      const waMsg = encodeURIComponent(`Здравствуйте! Меня заинтересовал товар "${item.title}" в бутике ${item.place}.`);
+      const waMsg = encodeURIComponent(`Здравствуйте! Меня заинтересовал товар "${item.title}" (${item.price}) в бутике ${item.place}.`);
+
+      const isMyProduct = item.ownerToken === userToken;
+      const deleteBtnHtml = isMyProduct && item.id
+        ? `<button onclick="deleteProduct('${item.id}')" class="btn-delete">🗑 Снять с продажи</button>`
+        : '';
 
       card.innerHTML = `
         ${imgHtml}
+        <div class="card-price">${escapeHtml(item.price || 'Договорная')}</div>
         <h3>${escapeHtml(item.title)}</h3>
         <div class="card-info">
           <div class="badges">
@@ -214,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <a href="tel:${escapeHtml(item.phone)}" class="phone-btn">📞 Звонок</a>
           <a href="https://wa.me/${waPhone}?text=${waMsg}" target="_blank" class="wa-btn">💬 WhatsApp</a>
         </div>
+        ${deleteBtnHtml}
       `;
       productsGrid.appendChild(card);
     });
@@ -224,7 +287,10 @@ document.addEventListener('DOMContentLoaded', () => {
       .onSnapshot((snapshot) => {
         allProducts = [];
         snapshot.forEach((doc) => {
-          allProducts.push(doc.data());
+          allProducts.push({
+            id: doc.id,
+            ...doc.data()
+          });
         });
         filterAndRender();
       }, (err) => {
